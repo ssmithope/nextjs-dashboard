@@ -1,7 +1,12 @@
 import { sql } from '@vercel/postgres';
 
-type Customer = { id: string; name: string; email?: string };
-type Invoice = {
+export type Customer = { 
+  id: string; 
+  name: string; 
+  email?: string 
+};
+
+export type Invoice = {
   id: string;
   customer_id: string;
   amount: number;
@@ -15,7 +20,7 @@ export type InvoiceWithCustomer = Invoice & {
   email: string;
 };
 
-type CardData = {
+export type CardData = {
   totalPaidInvoices: number;
   totalPendingInvoices: number;
   numberOfInvoices: number;
