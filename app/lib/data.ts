@@ -8,6 +8,13 @@ type Invoice = {
   status: 'paid' | 'pending';
   date: string;
 };
+
+// Extended type for queries that join customers
+export type InvoiceWithCustomer = Invoice & {
+  customer_name: string;
+  email: string;
+};
+
 type CardData = {
   totalPaidInvoices: number;
   totalPendingInvoices: number;
@@ -18,7 +25,11 @@ type CardData = {
 // Customers
 export async function fetchCustomers(): Promise<Customer[]> {
   try {
-    const { rows } = await sql`SELECT id, name, email FROM customers ORDER BY name ASC`;
+    const { rows } = await sql`
+      SELECT id, name, email
+      FROM customers
+      ORDER BY name ASC
+    `;
     return rows as Customer[];
   } catch (error) {
     console.error('Error fetching customers:', error);
@@ -37,15 +48,23 @@ export async function fetchInvoices(): Promise<Invoice[]> {
   }
 }
 
-// Latest invoices
-export async function fetchLatestInvoices(): Promise<Invoice[]> {
+// Latest invoices (JOIN customers to get name + email)
+export async function fetchLatestInvoices(): Promise<InvoiceWithCustomer[]> {
   try {
     const { rows } = await sql`
-      SELECT * FROM invoices
-      ORDER BY date DESC
+      SELECT invoices.id,
+             invoices.customer_id,
+             invoices.amount,
+             invoices.status,
+             invoices.date,
+             customers.name AS customer_name,
+             customers.email
+      FROM invoices
+      JOIN customers ON invoices.customer_id = customers.id
+      ORDER BY invoices.date DESC
       LIMIT 5
     `;
-    return rows as Invoice[];
+    return rows as InvoiceWithCustomer[];
   } catch (error) {
     console.error('Error fetching latest invoices:', error);
     return [];
@@ -88,21 +107,32 @@ export async function fetchCardData(): Promise<CardData> {
   }
 }
 
-// Filtered invoices with search + pagination
-export async function fetchFilteredInvoices(query: string, currentPage: number): Promise<Invoice[]> {
+// Filtered invoices with search + pagination (JOIN customers)
+export async function fetchFilteredInvoices(
+  query: string,
+  currentPage: number
+): Promise<InvoiceWithCustomer[]> {
   const ITEMS_PER_PAGE = 6;
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   try {
     const { rows } = await sql`
-      SELECT id, customer_id, amount, status, date
+      SELECT invoices.id,
+             invoices.customer_id,
+             invoices.amount,
+             invoices.status,
+             invoices.date,
+             customers.name AS customer_name,
+             customers.email
       FROM invoices
-      WHERE status ILIKE ${'%' + query + '%'}
-         OR customer_id::text ILIKE ${'%' + query + '%'}
-      ORDER BY date DESC
+      JOIN customers ON invoices.customer_id = customers.id
+      WHERE invoices.status ILIKE ${'%' + query + '%'}
+         OR customers.name ILIKE ${'%' + query + '%'}
+         OR customers.email ILIKE ${'%' + query + '%'}
+      ORDER BY invoices.date DESC
       LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
     `;
-    return rows as Invoice[];
+    return rows as InvoiceWithCustomer[];
   } catch (error) {
     console.error('Error fetching filtered invoices:', error);
     return [];

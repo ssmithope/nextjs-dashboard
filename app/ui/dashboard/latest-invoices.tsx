@@ -1,7 +1,7 @@
-import { fetchLatestInvoices } from '@/app/lib/data';
+import { fetchLatestInvoices, InvoiceWithCustomer } from '@/app/lib/data';
 
 export default async function LatestInvoices() {
-  const invoices = await fetchLatestInvoices();
+  const invoices: InvoiceWithCustomer[] = await fetchLatestInvoices();
 
   return (
     <div className="rounded-lg border p-4 bg-white">
