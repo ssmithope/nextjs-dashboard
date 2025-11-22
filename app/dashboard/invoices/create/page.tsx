@@ -1,16 +1,14 @@
 import { fetchCustomers } from '@/app/lib/data';
-import CreateForm from '@/app/ui/invoices/create-form';
+import CreateInvoiceForm from '@/app/ui/invoices/create-form';
 
-export const metadata = {
-  title: 'Create invoice',
-};
-
-export default async function Page() {
+export default async function CreateInvoicePage() {
   const customers = await fetchCustomers();
+  const customerOptions = customers.map((c: any) => ({ id: c.id, name: c.name }));
+
   return (
-    <div className="max-w-xl">
-      <h1 className="text-xl font-semibold mb-4">Create invoice</h1>
-      <CreateForm customers={customers} />
+    <div>
+      <h1 className="text-xl font-semibold">Create invoice</h1>
+      <CreateInvoiceForm customers={customerOptions} />
     </div>
   );
 }

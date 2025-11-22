@@ -1,24 +1,32 @@
-// app/dashboard/customers/page.tsx
-import { getCustomers } from '@/app/lib/data';
+import { fetchInvoices } from '@/app/lib/data';
 
-export default async function CustomersPage() {
-  const customers = await getCustomers();
+export default async function InvoicesPage() {
+  const invoices = await fetchInvoices();
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Customers</h1>
-      <table className="min-w-full border border-gray-300">
+    <div>
+      <h1 className="text-xl font-semibold">Invoices</h1>
+      <a href="/dashboard/invoices/create" className="btn btn-primary mt-4">Create invoice</a>
+      <table className="mt-6 w-full">
         <thead>
-          <tr className="bg-gray-100">
-            <th className="px-4 py-2 border">Name</th>
-            <th className="px-4 py-2 border">Email</th>
+          <tr>
+            <th>Customer</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th />
           </tr>
         </thead>
         <tbody>
-          {customers.map((customer) => (
-            <tr key={customer.id}>
-              <td className="px-4 py-2 border">{customer.name}</td>
-              <td className="px-4 py-2 border">{customer.email}</td>
+          {invoices.map((inv: any) => (
+            <tr key={inv.id}>
+              <td>{inv.customer_id}</td>
+              <td>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(inv.amount / 100)}</td>
+              <td>{inv.status}</td>
+              <td>{new Date(inv.date).toLocaleDateString()}</td>
+              <td>
+                <a href={`/dashboard/invoices/${inv.id}/edit`} className="text-blue-600">Edit</a>
+              </td>
             </tr>
           ))}
         </tbody>

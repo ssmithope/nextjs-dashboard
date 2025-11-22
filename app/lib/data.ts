@@ -1,48 +1,58 @@
 import { sql } from '@vercel/postgres';
 
-// -------------------- Customers --------------------
-export async function fetchCustomers() {
+type Customer = { id: string; name: string; email?: string };
+type Invoice = {
+  id: string;
+  customer_id: string;
+  amount: number;
+  status: 'paid' | 'pending';
+  date: string;
+};
+type CardData = {
+  totalPaidInvoices: number;
+  totalPendingInvoices: number;
+  numberOfInvoices: number;
+  numberOfCustomers: number;
+};
+
+// Customers
+export async function fetchCustomers(): Promise<Customer[]> {
   try {
-    const { rows } = await sql`SELECT * FROM customers`;
-    return rows;
+    const { rows } = await sql`SELECT id, name, email FROM customers ORDER BY name ASC`;
+    return rows as Customer[];
   } catch (error) {
     console.error('Error fetching customers:', error);
     return [];
   }
 }
 
-// Optional alias if assignment mentions getCustomers
-export async function getCustomers() {
-  return fetchCustomers();
-}
-
-// -------------------- Invoices --------------------
-export async function fetchInvoices() {
+// Invoices
+export async function fetchInvoices(): Promise<Invoice[]> {
   try {
     const { rows } = await sql`SELECT * FROM invoices`;
-    return rows;
+    return rows as Invoice[];
   } catch (error) {
     console.error('Error fetching invoices:', error);
     return [];
   }
 }
 
-// Fetch only the latest 5 invoices
-export async function fetchLatestInvoices() {
+// Latest invoices
+export async function fetchLatestInvoices(): Promise<Invoice[]> {
   try {
     const { rows } = await sql`
       SELECT * FROM invoices
       ORDER BY date DESC
       LIMIT 5
     `;
-    return rows;
+    return rows as Invoice[];
   } catch (error) {
     console.error('Error fetching latest invoices:', error);
     return [];
   }
 }
 
-// -------------------- Revenue --------------------
+// Revenue
 export async function fetchRevenue() {
   try {
     const { rows } = await sql`SELECT * FROM revenue`;
@@ -53,20 +63,48 @@ export async function fetchRevenue() {
   }
 }
 
-// -------------------- Dashboard Cards --------------------
-export async function fetchCardData() {
+// Dashboard Cards
+export async function fetchCardData(): Promise<CardData> {
   try {
-    const customers = await sql`SELECT COUNT(*) FROM customers`;
-    const invoices = await sql`SELECT COUNT(*) FROM invoices`;
-    const revenue = await sql`SELECT SUM(revenue) FROM revenue`;
+    const paid = await sql`SELECT SUM(amount) AS total FROM invoices WHERE status = 'paid'`;
+    const pending = await sql`SELECT SUM(amount) AS total FROM invoices WHERE status = 'pending'`;
+    const invoiceCount = await sql`SELECT COUNT(*) AS count FROM invoices`;
+    const customerCount = await sql`SELECT COUNT(*) AS count FROM customers`;
 
     return {
-      customers: customers.rows[0].count,
-      invoices: invoices.rows[0].count,
-      revenue: revenue.rows[0].sum,
+      totalPaidInvoices: Number(paid.rows[0].total ?? 0),
+      totalPendingInvoices: Number(pending.rows[0].total ?? 0),
+      numberOfInvoices: Number(invoiceCount.rows[0].count ?? 0),
+      numberOfCustomers: Number(customerCount.rows[0].count ?? 0),
     };
   } catch (error) {
     console.error('Error fetching card data:', error);
-    return { customers: 0, invoices: 0, revenue: 0 };
+    return {
+      totalPaidInvoices: 0,
+      totalPendingInvoices: 0,
+      numberOfInvoices: 0,
+      numberOfCustomers: 0,
+    };
+  }
+}
+
+// Filtered invoices with search + pagination
+export async function fetchFilteredInvoices(query: string, currentPage: number): Promise<Invoice[]> {
+  const ITEMS_PER_PAGE = 6;
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  try {
+    const { rows } = await sql`
+      SELECT id, customer_id, amount, status, date
+      FROM invoices
+      WHERE status ILIKE ${'%' + query + '%'}
+         OR customer_id::text ILIKE ${'%' + query + '%'}
+      ORDER BY date DESC
+      LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
+    `;
+    return rows as Invoice[];
+  } catch (error) {
+    console.error('Error fetching filtered invoices:', error);
+    return [];
   }
 }

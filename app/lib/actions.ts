@@ -4,7 +4,7 @@ import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-type ActionState = { message?: string };
+type ActionState = { message: string | null };
 
 function toCents(amount: string | number) {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -24,8 +24,8 @@ export async function createInvoice(_: ActionState, formData: FormData): Promise
 
   try {
     await sql`
-      INSERT INTO invoices (customer_id, amount, status, date)
-      VALUES (${customerId}, ${amount}, ${status}, ${date})
+      INSERT INTO invoices (id, customer_id, amount, status, date)
+      VALUES (gen_random_uuid(), ${customerId}, ${amount}, ${status}, ${date})
     `;
     revalidatePath('/dashboard/invoices');
     redirect('/dashboard/invoices');
@@ -65,7 +65,7 @@ export async function deleteInvoice(id: string): Promise<ActionState> {
   try {
     await sql`DELETE FROM invoices WHERE id = ${id}`;
     revalidatePath('/dashboard/invoices');
-    return {};
+    return { message: null };
   } catch (err) {
     console.error(err);
     return { message: 'Failed to delete invoice.' };
